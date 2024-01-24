@@ -4,7 +4,7 @@
   "author": "heke",
   "scripts": {
     "bootstrap": "yarn install",
-    "serve": "npm run dev",
+    "serve": "npm run dev & nodemon server/index.js",
     "dev": "vite",
     "build": "cross-env NODE_ENV=production vite build && esno ./build/script/postBuild.ts",
     "build:test": "cross-env vite build --mode test && esno ./build/script/postBuild.ts",
@@ -54,7 +54,9 @@
     "sortablejs": "^1.14.0",
     "vue": "^3.2.21",
     "vue-router": "^4.0.12",
-    "vue-types": "^4.1.1"
+    "vue-types": "^4.1.1",
+    "multiparty": "^4.2.3",
+    "fs-extra": "^8.1.0"
   },
   "devDependencies": {
     "@commitlint/cli": "^14.1.0",
@@ -130,7 +132,8 @@
     "vite-plugin-vue-setup-extend": "^0.1.0",
     "vite-plugin-windicss": "^1.4.12",
     "vue-eslint-parser": "^8.0.1",
-    "vue-tsc": "^1.0.7"
+    "vue-tsc": "^1.0.7",
+    "nodemon": "^2.0.1"
   },
   "resolutions": {
     "//": "Used to install imagemin dependencies, because imagemin may not be installed in China. If it is abroad, you can delete it",
