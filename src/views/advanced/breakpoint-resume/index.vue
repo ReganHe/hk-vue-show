@@ -1,45 +1,36 @@
 <template>
-  <div id="app">
-    <div>
-      <input type="file" :disabled="status !== Status.wait" @change="handleFileChange" />
-      <el-button @click="handleUpload" :disabled="uploadDisabled">upload</el-button>
-      <el-button @click="handleResume" v-if="status === Status.pause">resume</el-button>
-      <el-button
+  <div class="breakpoint-resume">
+    <div class="header-commands">
+      <Input type="file" :disabled="model.status !== Status.wait" @change="handleFileChange" />
+      <Button @click="handleUpload" :disabled="uploadDisabled">upload</Button>
+      <Button @click="handleResume" v-if="model.status === Status.pause">resume</Button>
+      <Button
         v-else
-        :disabled="status !== Status.uploading || !container.hash"
+        :disabled="model.status !== Status.uploading || !model.container.hash"
         @click="handlePause"
-        >pause</el-button
+        >pause</Button
       >
-      <el-button @click="handleDelete">delete</el-button>
+      <Button @click="handleDelete">delete</Button>
     </div>
     <div>
       <div>
         <div>calculate chunk hash</div>
-        <el-progress :percentage="hashPercentage" />
+        <Progress :percentage="model.hashPercentage" />
       </div>
       <div>
         <div>percentage</div>
-        <el-progress :percentage="fakeUploadPercentage" />
+        <Progress :percentage="model.fakeUploadPercentage" />
       </div>
     </div>
-    <el-table :data="model.dataList">
-      <el-table-column prop="hash" label="chunk hash" align="center" />
-      <el-table-column label="size(KB)" align="center" width="120">
-        <!-- <template #default="{ row }"> -->
-        <!-- {{ row.size | transformByte }} -->
-        <!-- </template> -->
-      </el-table-column>
-      <el-table-column label="percentage" align="center">
-        <template #default="{ row }">
-          <el-progress :percentage="row.percentage" color="#909399" />
-        </template>
-      </el-table-column>
-    </el-table>
+    <div class="common-table-container">
+      <ca-common-table v-bind="table" />
+    </div>
   </div>
 </template>
 
 <script setup>
   import { reactive, computed, watch } from 'vue';
+  import { Input, Button, Progress, message } from 'ant-design-vue';
   // 切片大小
   // chunk size
   const SIZE = 10 * 1024 * 1024;
@@ -54,6 +45,42 @@
   //     return Number((val / 1024).toFixed(0));
   //   },
   // },
+
+  const columns = computed(() => {
+    return [
+      {
+        type: 'default',
+        label: 'chunk hash',
+        dataField: 'hash',
+        elementProps: {
+          width: '100px',
+        },
+      },
+      {
+        type: 'default',
+        label: 'size(KB)',
+        dataField: 'size',
+        elementProps: {
+          width: '100px',
+        },
+      },
+      {
+        type: 'default',
+        label: 'percentage',
+        dataField: 'percentage',
+        elementProps: {
+          width: '120px',
+        },
+      },
+    ];
+  });
+
+  const table = reactive({
+    loading: false,
+    dataSource: [],
+    columns,
+    pagination: false,
+  });
 
   const model = reactive({
     container: {
@@ -74,8 +101,8 @@
     return !model.container.file || [Status.pause, Status.uploading].includes(model.status);
   });
   const uploadPercentage = computed(() => {
-    if (!model.container.file || !model.dataList.length) return 0;
-    const loaded = model.dataList
+    if (!model.container.file || !table.dataSource.length) return 0;
+    const loaded = table.dataSource
       .map((item) => item.size * item.percentage)
       .reduce((acc, cur) => acc + cur);
     return parseInt((loaded / model.container.file.size).toFixed(2));
@@ -91,7 +118,7 @@
       url: 'http://localhost:3000/delete',
     });
     if (JSON.parse(data).code === 0) {
-      // this.$message.success('delete success');
+      message.success('delete success');
     }
   };
   const handlePause = () => {
@@ -107,7 +134,7 @@
   };
   const handleResume = async () => {
     model.status = Status.uploading;
-    const { uploadedList } = await verifyUpload(model.container.file.name, model.container.hash);
+    const { uploadedList } = await verifyUpload(model.container.file?.name, model.container.hash);
     await uploadChunks(uploadedList);
   };
   // xhr
@@ -169,7 +196,7 @@
   };
   const handleFileChange = (e) => {
     console.log('handleFileChange', e);
-    const [file] = e.target.files;
+    const [file] = e.target?.files;
     if (!file) return;
     resetData();
     // console.log('this.$data', this.$data);
@@ -191,12 +218,12 @@
     );
     console.log('handleUpload uploadedList', uploadedList);
     if (!shouldUpload) {
-      // this.$message.success('skip upload：file upload success, check /target directory');
+      message.success('skip upload：file upload success, check /target directory');
       model.status = Status.wait;
       return;
     }
 
-    model.dataList = fileChunkList.map(({ file }, index) => ({
+    table.dataSource = fileChunkList.map(({ file }, index) => ({
       fileHash: model.container.hash,
       index,
       hash: model.container.hash + '-' + index,
@@ -210,7 +237,7 @@
   // 上传切片，同时过滤已上传的切片
   // upload chunks and filter uploaded chunks
   const uploadChunks = async (uploadedList = []) => {
-    const requestList = model.dataList
+    const requestList = table.dataSource
       .filter(({ hash }) => !uploadedList.includes(hash))
       .map(({ chunk, hash, index }) => {
         const formData = new FormData();
@@ -224,7 +251,7 @@
         request({
           url: 'http://localhost:3000',
           data: formData,
-          onProgress: createProgressHandler(model.dataList[index]),
+          onProgress: createProgressHandler(table.dataSource[index]),
           requestList: model.requestList,
         })
       );
@@ -233,7 +260,7 @@
     // merge chunks when the number of chunks uploaded before and
     // the number of chunks uploaded this time
     // are equal to the number of all chunks
-    if (uploadedList.length + requestList.length === model.dataList.length) {
+    if (uploadedList.length + requestList.length === table.dataSource.length) {
       await mergeRequest();
     }
   };
@@ -251,7 +278,7 @@
         filename: model.container.file.name,
       }),
     });
-    // this.$message.success('upload success, check /target directory');
+    message.success('upload success, check /target directory');
     model.status = Status.wait;
   };
   // 根据 hash 验证文件是否曾经已经被上传过
@@ -279,3 +306,11 @@
     };
   };
 </script>
+
+<style lang="scss">
+  .breakpoint-resume {
+    .header-commands {
+      display: flex;
+    }
+  }
+</style>
