@@ -10,7 +10,7 @@ const demo: AppRouteModule = {
   meta: {
     orderNo: 0,
     icon: 'ion:paper-plane-outline',
-    title: 'Demo',
+    title: '组件示例',
     hideMenu: !isDevMode(),
   },
   children: [
