@@ -8,14 +8,7 @@
         @change="handleFileChange"
       />
       <div class="commands">
-        <Button @click="handleUpload" :disabled="uploadDisabled">upload</Button>
-        <Button @click="handleResume" v-if="model.status === Status.pause">resume</Button>
-        <Button
-          v-else
-          :disabled="model.status !== Status.uploading || !model.container.hash"
-          @click="handlePause"
-          >pause</Button
-        >
+        <Button @click="handleUpload" :disabled="uploadDisabledRef">upload</Button>
         <Button @click="handleDelete">delete</Button>
       </div>
     </div>
@@ -23,10 +16,6 @@
       <div>
         <div>calculate chunk hash</div>
         <Progress :percent="model.hashPercentage" />
-      </div>
-      <div>
-        <div>percentage</div>
-        <Progress :percent="model.fakeUploadPercentage" />
       </div>
     </div>
     <div class="common-table-container">
@@ -36,17 +25,16 @@
 </template>
 
 <script setup>
-  import { reactive, computed, watch } from 'vue';
+  import { reactive, computed } from 'vue';
   import { Input, Button, Progress, message } from 'ant-design-vue';
 
   /** 切片大小 (chunk size) */
   const SIZE = 10 * 1024 * 1024;
   const Status = {
     wait: 'wait',
-    pause: 'pause',
     uploading: 'uploading',
   };
-  const columns = computed(() => {
+  const columnsRef = computed(() => {
     return [
       {
         type: 'default',
@@ -78,7 +66,7 @@
   const table = reactive({
     loading: false,
     dataSource: [],
-    columns,
+    columns: columnsRef.value,
     pagination: false,
   });
 
@@ -91,52 +79,69 @@
     hashPercentage: 0,
     requestList: [],
     status: Status.wait,
-    // 当暂停时会取消 xhr 导致进度条后退
-    // 为了避免这种情况，需要定义一个假的进度条
-    // use fake progress to avoid progress backwards when upload is paused
-    fakeUploadPercentage: 0,
   });
 
-  const uploadDisabled = computed(() => {
-    return !model.container.file || [Status.pause, Status.uploading].includes(model.status);
+  const uploadDisabledRef = computed(() => {
+    return !model.container.file || [Status.uploading].includes(model.status);
   });
-  const uploadPercentage = computed(() => {
-    if (!model.container.file || !table.dataSource.length) return 0;
-    const loaded = table.dataSource
-      .map((item) => item.size * item.percentage)
-      .reduce((acc, cur) => acc + cur);
-    return parseInt((loaded / model.container.file.size).toFixed(2));
-  });
-  watch(uploadPercentage, (now) => {
-    if (now > model.fakeUploadPercentage) {
-      model.fakeUploadPercentage = now;
+
+  const handleFileChange = (e) => {
+    console.log('handleFileChange', e);
+    const [file] = e.target?.files;
+    if (!file) return;
+    resetData();
+    model.container.file = file;
+  };
+
+  const handleUpload = async () => {
+    if (!model.container.file) return;
+    model.status = Status.uploading;
+    const fileChunkList = createFileChunk(model.container.file);
+    console.log('handleUpload fileChunkList', fileChunkList);
+    model.container.hash = await calculateHash(fileChunkList);
+    const { shouldUpload, uploadedList } = await verifyUpload(
+      model.container.file.name,
+      model.container.hash
+    );
+    console.log('handleUpload uploadedList', uploadedList);
+    if (!shouldUpload) {
+      message.success('skip upload：file upload success, check /target directory');
+      model.status = Status.wait;
+      return;
     }
-  });
+
+    table.dataSource = fileChunkList.map(({ file }, index) => ({
+      fileHash: model.container.hash,
+      index,
+      hash: model.container.hash + '-' + index,
+      chunk: file,
+      size: (file.size / 1024).toFixed(0),
+      percentage: uploadedList.includes(index) ? 100 : 0,
+    }));
+
+    await uploadChunks(uploadedList);
+  };
 
   const handleDelete = async () => {
     const { data } = await request({
       url: 'http://localhost:3000/delete',
     });
     if (JSON.parse(data).code === 0) {
+      resetData();
       message.success('delete success');
     }
   };
-  const handlePause = () => {
-    model.status = Status.pause;
-    resetData();
-  };
+
   const resetData = () => {
     model.requestList.forEach((xhr) => xhr?.abort());
     model.requestList = [];
     if (model.container.worker) {
       model.container.worker.onmessage = null;
     }
+    model.hashPercentage = 0;
+    table.dataSource = [];
   };
-  const handleResume = async () => {
-    model.status = Status.uploading;
-    const { uploadedList } = await verifyUpload(model.container.file?.name, model.container.hash);
-    await uploadChunks(uploadedList);
-  };
+
   // xhr
   const request = ({
     url,
@@ -168,8 +173,8 @@
       requestList?.push(xhr);
     });
   };
-  // 生成文件切片
-  // create file chunk
+
+  /** 生成文件切片(create file chunk) */
   const createFileChunk = (file, size = SIZE) => {
     const fileChunkList = [];
     let cur = 0;
@@ -179,8 +184,12 @@
     }
     return fileChunkList;
   };
-  // 生成文件 hash（web-worker）
-  // use web-worker to calculate hash
+
+  /**
+   * 生成文件 hash（web-worker）
+   * use web-worker to calculate hash
+   * @param {*} fileChunkList 文件切片集合
+   */
   const calculateHash = (fileChunkList) => {
     return new Promise((resolve) => {
       model.container.worker = new Worker('/hash.js');
@@ -194,46 +203,7 @@
       };
     });
   };
-  const handleFileChange = (e) => {
-    console.log('handleFileChange', e);
-    const [file] = e.target?.files;
-    if (!file) return;
-    resetData();
-    // console.log('this.$data', this.$data);
-    // console.log('this.$options.data()', this.$options.data());
-    // 重置状态-使用默认状态覆盖现有状态
-    // Object.assign(this.$data, this.$options.data());
-    model.container.file = file;
-  };
-  const handleUpload = async () => {
-    if (!model.container.file) return;
-    model.status = Status.uploading;
-    const fileChunkList = createFileChunk(model.container.file);
-    console.log('handleUpload fileChunkList', fileChunkList);
-    model.container.hash = await calculateHash(fileChunkList);
 
-    const { shouldUpload, uploadedList } = await verifyUpload(
-      model.container.file.name,
-      model.container.hash
-    );
-    console.log('handleUpload uploadedList', uploadedList);
-    if (!shouldUpload) {
-      message.success('skip upload：file upload success, check /target directory');
-      model.status = Status.wait;
-      return;
-    }
-
-    table.dataSource = fileChunkList.map(({ file }, index) => ({
-      fileHash: model.container.hash,
-      index,
-      hash: model.container.hash + '-' + index,
-      chunk: file,
-      size: (file.size / 1024).toFixed(0),
-      percentage: uploadedList.includes(index) ? 100 : 0,
-    }));
-
-    await uploadChunks(uploadedList);
-  };
   // 上传切片，同时过滤已上传的切片
   // upload chunks and filter uploaded chunks
   const uploadChunks = async (uploadedList = []) => {
@@ -264,6 +234,7 @@
       await mergeRequest();
     }
   };
+
   // 通知服务端合并切片
   // notify server to merge chunks
   const mergeRequest = async () => {
@@ -281,6 +252,7 @@
     message.success('upload success, check /target directory');
     model.status = Status.wait;
   };
+
   // 根据 hash 验证文件是否曾经已经被上传过
   // 没有才进行上传
   // verify that the file has been uploaded based on the hash
@@ -298,6 +270,7 @@
     });
     return JSON.parse(data);
   };
+
   // 用闭包保存每个 chunk 的进度数据
   // use closures to save progress data for each chunk
   const createProgressHandler = (item) => {

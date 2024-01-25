@@ -81,11 +81,12 @@ module.exports = class {
   // 合并切片
   // merge chunks
   async handleMerge(req, res) {
-    console.log('handleMerge');
+    console.log('handleMerge', req, res);
     const data = await resolvePost(req);
     const { fileHash, filename, size } = data;
     const ext = extractExt(filename);
     const filePath = path.resolve(UPLOAD_DIR, `${fileHash}${ext}`);
+    console.log('handleMerge targetFilePath', filePath);
     await mergeFileChunk(filePath, fileHash, size);
     res.end(
       JSON.stringify({
