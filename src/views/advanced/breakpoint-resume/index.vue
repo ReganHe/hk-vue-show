@@ -8,12 +8,20 @@
         @change="handleFileChange"
       />
       <div class="commands">
-        <Button @click="handleUpload" :disabled="uploadDisabledRef">upload</Button>
-        <Button @click="handleDelete">delete</Button>
+        <Button
+          @click="handleUpload"
+          :disabled="!model.container.file || [Status.uploading].includes(model.status)"
+          >upload</Button
+        >
+        <Button
+          :disabled="!model.container.file || [Status.uploading].includes(model.status)"
+          @click="handleDelete"
+          >delete</Button
+        >
       </div>
     </div>
     <div class="total-chunk">
-      <div>文件大小{{ (model.container.file.size / 1024 / 1024).toFixed(2) }}Mb，上传进度： </div>
+      <div> 文件大小 {{ totalFileSizeRef }} MB，上传进度： </div>
       <Progress :percent="model.hashPercentage" />
     </div>
     <div class="common-table-container">
@@ -43,7 +51,7 @@
       },
       {
         type: 'default',
-        label: 'chunk hash',
+        label: 'ChunkHash',
         dataField: 'hash',
         elementProps: {
           width: '100px',
@@ -51,7 +59,7 @@
       },
       {
         type: 'default',
-        label: 'size(KB)',
+        label: 'Size(MB)',
         dataField: 'size',
         elementProps: {
           width: '100px',
@@ -59,7 +67,7 @@
       },
       {
         type: 'progess',
-        label: 'percentage',
+        label: '上传百分比',
         dataField: 'percentage',
         elementProps: {
           width: '120px',
@@ -86,8 +94,9 @@
     status: Status.wait,
   });
 
-  const uploadDisabledRef = computed(() => {
-    return !model.container.file || [Status.uploading].includes(model.status);
+  const totalFileSizeRef = computed(() => {
+    const totalSizeBit = model.container?.file?.size || 0;
+    return totalSizeBit === 0 ? 0 : (totalSizeBit / 1024 / 1024).toFixed(2);
   });
 
   const handleFileChange = (e) => {
@@ -120,7 +129,7 @@
       index,
       hash: model.container.hash + '-' + index,
       chunk: file,
-      size: (file.size / 1024).toFixed(0),
+      size: (file.size / 1024 / 1024).toFixed(2),
       percentage: uploadedList.includes(index) ? 100 : 0,
     }));
 
