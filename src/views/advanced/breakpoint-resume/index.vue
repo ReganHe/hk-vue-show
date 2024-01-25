@@ -1,25 +1,32 @@
 <template>
   <div class="breakpoint-resume">
     <div class="header-commands">
-      <Input type="file" :disabled="model.status !== Status.wait" @change="handleFileChange" />
-      <Button @click="handleUpload" :disabled="uploadDisabled">upload</Button>
-      <Button @click="handleResume" v-if="model.status === Status.pause">resume</Button>
-      <Button
-        v-else
-        :disabled="model.status !== Status.uploading || !model.container.hash"
-        @click="handlePause"
-        >pause</Button
-      >
-      <Button @click="handleDelete">delete</Button>
+      <Input
+        class="file-select"
+        type="file"
+        :disabled="model.status !== Status.wait"
+        @change="handleFileChange"
+      />
+      <div class="commands">
+        <Button @click="handleUpload" :disabled="uploadDisabled">upload</Button>
+        <Button @click="handleResume" v-if="model.status === Status.pause">resume</Button>
+        <Button
+          v-else
+          :disabled="model.status !== Status.uploading || !model.container.hash"
+          @click="handlePause"
+          >pause</Button
+        >
+        <Button @click="handleDelete">delete</Button>
+      </div>
     </div>
     <div>
       <div>
         <div>calculate chunk hash</div>
-        <Progress :percentage="model.hashPercentage" />
+        <Progress :percent="model.hashPercentage" />
       </div>
       <div>
         <div>percentage</div>
-        <Progress :percentage="model.fakeUploadPercentage" />
+        <Progress :percent="model.fakeUploadPercentage" />
       </div>
     </div>
     <div class="common-table-container">
@@ -228,7 +235,7 @@
       index,
       hash: model.container.hash + '-' + index,
       chunk: file,
-      size: file.size,
+      size: (file.size / 1024).toFixed(0),
       percentage: uploadedList.includes(index) ? 100 : 0,
     }));
 
@@ -310,7 +317,15 @@
 <style lang="scss">
   .breakpoint-resume {
     .header-commands {
+      background: #ffffff;
+      padding: 8px 16px 8px 0;
       display: flex;
+      align-items: center;
+
+      .file-select {
+        border: none;
+        flex: 1;
+      }
     }
   }
 </style>
