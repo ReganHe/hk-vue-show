@@ -12,11 +12,9 @@
         <Button @click="handleDelete">delete</Button>
       </div>
     </div>
-    <div>
-      <div>
-        <div>calculate chunk hash</div>
-        <Progress :percent="model.hashPercentage" />
-      </div>
+    <div class="total-chunk">
+      <div>文件大小{{ (model.container.file.size / 1024 / 1024).toFixed(2) }}Mb，上传进度： </div>
+      <Progress :percent="model.hashPercentage" />
     </div>
     <div class="common-table-container">
       <ca-common-table v-bind="table" />
@@ -36,6 +34,13 @@
   };
   const columnsRef = computed(() => {
     return [
+      {
+        type: 'index',
+        label: '序号',
+        elementProps: {
+          width: '40px',
+        },
+      },
       {
         type: 'default',
         label: 'chunk hash',
@@ -292,6 +297,9 @@
         border: none;
         flex: 1;
       }
+    }
+    .total-chunk {
+      padding: 16px;
     }
   }
 </style>
