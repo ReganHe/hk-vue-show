@@ -50,7 +50,7 @@
 
 <script lang="tsx" setup>
   import { computed, ref, onMounted } from 'vue';
-  import { Table, Button, ButtonGroup } from 'ant-design-vue';
+  import { Table, Button, ButtonGroup, Progress } from 'ant-design-vue';
   import { commonTableProps } from './props';
   import CommandColumn from './components/CommandColumn.vue';
   import StatusColumn from './components/StatusColumn.vue';
@@ -147,6 +147,14 @@
                   dataField={r.dataField}
                 />
               );
+            },
+            ...r.elementProps,
+          };
+        case 'progess':
+          return {
+            title: r.label,
+            customRender: ({ record }) => {
+              return <Progress percent={record[r.dataField]} />;
             },
             ...r.elementProps,
           };

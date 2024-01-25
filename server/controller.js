@@ -16,7 +16,7 @@ const pipeStream = (path, writeStream) =>
   new Promise((resolve) => {
     const readStream = fse.createReadStream(path);
     readStream.on('end', () => {
-      // fse.unlinkSync(path);
+      fse.unlinkSync(path);
       resolve();
     });
     readStream.pipe(writeStream);
@@ -74,7 +74,7 @@ const mergeFileChunk = async (filePath, fileHash, size) => {
   );
   // 合并后删除保存切片的目录
   // delete chunk directory after merging
-  // fse.rmdirSync(chunkDir);
+  fse.rmdirSync(chunkDir);
 };
 
 module.exports = class {

@@ -38,21 +38,14 @@
 <script setup>
   import { reactive, computed, watch } from 'vue';
   import { Input, Button, Progress, message } from 'ant-design-vue';
-  // 切片大小
-  // chunk size
-  const SIZE = 10 * 1024 * 1024;
 
+  /** 切片大小 (chunk size) */
+  const SIZE = 10 * 1024 * 1024;
   const Status = {
     wait: 'wait',
     pause: 'pause',
     uploading: 'uploading',
   };
-  // filters: {
-  //   transformByte(val) {
-  //     return Number((val / 1024).toFixed(0));
-  //   },
-  // },
-
   const columns = computed(() => {
     return [
       {
@@ -72,7 +65,7 @@
         },
       },
       {
-        type: 'default',
+        type: 'progess',
         label: 'percentage',
         dataField: 'percentage',
         elementProps: {
@@ -96,7 +89,6 @@
       worker: null,
     },
     hashPercentage: 0,
-    dataList: [],
     requestList: [],
     status: Status.wait,
     // 当暂停时会取消 xhr 导致进度条后退
@@ -104,6 +96,7 @@
     // use fake progress to avoid progress backwards when upload is paused
     fakeUploadPercentage: 0,
   });
+
   const uploadDisabled = computed(() => {
     return !model.container.file || [Status.pause, Status.uploading].includes(model.status);
   });
