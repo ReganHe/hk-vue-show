@@ -33,14 +33,15 @@
     loadMore: { type: Function, required: true },
   });
 
-  const isShowLoad = ref(false);
   const visibleCount = Math.ceil(props.scrollHeight / props.itemHeight) + 1;
+  let loadingLock = false;
+  let lockLoadMoreByHideLoading_once = false;
+
+  const isShowLoad = ref(false);
   const start = ref(0);
   const renderData = ref([...props.listData]);
   const scrollBox = ref(null);
   let lastIndex = start.value;
-  let loadingLock = false;
-  let lockLoadMoreByHideLoading_once = false;
 
   const end = computed(() => Math.min(start.value + 2 * visibleCount - 1, renderData.value.length));
   const paddingTop = computed(() => start.value * props.itemHeight);
@@ -122,6 +123,8 @@
     overflow-y: auto;
     .virtual-list {
       position: relative;
+      background: #ffffff;
+      margin: 16px;
     }
   }
 </style>

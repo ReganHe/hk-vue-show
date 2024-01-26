@@ -3,11 +3,11 @@
     v-if="listDataRef.length > 0"
     :listData="listDataRef"
     :itemHeight="50"
-    :scrollHeight="600"
+    :scrollHeight="770"
     :loadMore="loadMore"
   >
     <template #item="{ item }">
-      <div class="list-item">
+      <div class="item-row">
         {{ item }}
       </div>
     </template>
@@ -60,7 +60,7 @@
 </script>
 
 <style lang="scss" scoped>
-  .list-item {
+  .item-row {
     height: 50px;
     line-height: 50px;
     border-bottom: 1px solid #ccc;
