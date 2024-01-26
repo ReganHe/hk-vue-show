@@ -34,16 +34,26 @@
   });
 
   const isShowLoad = ref(false);
-
   const visibleCount = Math.ceil(props.scrollHeight / props.itemHeight) + 1;
   const start = ref(0);
-  const end = computed(() => Math.min(start.value + 2 * visibleCount - 1, renderData.value.length));
-  const paddingTop = computed(() => start.value * props.itemHeight);
   const renderData = ref([...props.listData]);
-  const paddingBottom = computed(() => (renderData.value.length - end.value) * props.itemHeight);
-  const visibleItems = computed(() => renderData.value.slice(start.value, end.value));
   const scrollBox = ref(null);
   let lastIndex = start.value;
+  let loadingLock = false;
+  let lockLoadMoreByHideLoading_once = false;
+
+  const end = computed(() => Math.min(start.value + 2 * visibleCount - 1, renderData.value.length));
+  const paddingTop = computed(() => start.value * props.itemHeight);
+  const paddingBottom = computed(() => (renderData.value.length - end.value) * props.itemHeight);
+  const visibleItems = computed(() => renderData.value.slice(start.value, end.value));
+
+  onMounted(() => {
+    scrollBox.value?.addEventListener('scroll', handleScroll);
+  });
+
+  onUnmounted(() => {
+    scrollBox.value?.removeEventListener('scroll', handleScroll);
+  });
 
   const handleScroll = rafThrottle(() => {
     onScrollToBottom();
@@ -71,8 +81,7 @@
       loadMore();
     }
   };
-  let loadingLock = false;
-  let lockLoadMoreByHideLoading_once = false;
+
   const loadMore = async () => {
     if (loadingLock) return;
     if (lockLoadMoreByHideLoading_once) {
@@ -106,21 +115,13 @@
       });
     };
   }
-
-  onMounted(() => {
-    scrollBox.value.addEventListener('scroll', handleScroll);
-  });
-
-  onUnmounted(() => {
-    scrollBox.value.removeEventListener('scroll', handleScroll);
-  });
 </script>
 
 <style lang="scss" scoped>
-  .virtual-list {
-    position: relative;
-  }
   .scroll-box {
     overflow-y: auto;
+    .virtual-list {
+      position: relative;
+    }
   }
 </style>
