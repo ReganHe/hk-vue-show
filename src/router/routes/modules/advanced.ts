@@ -22,6 +22,14 @@ const advanced: AppRouteModule = {
         title: '断点续传',
       },
     },
+    {
+      path: '/advanced/virtual-list',
+      name: 'VirtualList',
+      component: () => import('/@/views/advanced/virtual-list/index.vue'),
+      meta: {
+        title: '虚拟列表',
+      },
+    },
   ],
 };
 
