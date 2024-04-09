@@ -26,7 +26,7 @@ export interface SelectItem {
 
 /** 通用表格字段 */
 export interface TableField {
-  type: 'index' | 'link' | 'custom' | 'commands' | 'status' | 'default';
+  type: 'index' | 'link' | 'custom' | 'commands' | 'status' | 'progess' | 'default';
   label: string;
   dataField: string;
   elementProps?: Object;
